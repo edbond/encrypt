@@ -1,9 +1,6 @@
-use std::future::Future;
-
 use wasm_bindgen::prelude::*;
-use wasm_bindgen_futures::spawn_local;
-use web_sys::{Document, HtmlElement, HtmlInputElement, window, Window};
 use web_sys::console::*;
+use web_sys::{window, Document, File, FileReader, HtmlElement, HtmlInputElement, Window};
 use yew::prelude::*;
 
 use crate::utils::set_panic_hook;
@@ -15,7 +12,6 @@ mod utils;
 #[cfg(feature = "wee_alloc")]
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
-
 
 #[wasm_bindgen]
 extern "C" {
@@ -50,25 +46,13 @@ fn App() -> Html {
                 .dyn_into()
                 .unwrap();
 
-            let text = wasm_bindgen_futures::JsFuture::from(
-                file_input.files().unwrap().get(0).unwrap().text(),
-            );
-            let file_content = text.then(|text| {
-                let text = text.unwrap();
-                let text = text.as_string().unwrap();
+            let file_reader: FileReader = FileReader::new().expect("should have file reader");
+            file_reader.set_onloadend(|_| {
+                log_1(&format!("file content: {:?}", file_reader.result()).into());
             });
-
-            match file_content {
-                Ok(Ok(file_content)) => {
-                    log_1(&format!("file content: {}", file_content).into());
-                }
-                Ok(Err(_)) => {
-                    log_1(&"file content error".into());
-                }
-                Err(_) => {
-                    log_1(&"file content error".into());
-                }
-            }
+            file_reader
+                .read_as_text(&file_input.files().unwrap().get(0).unwrap())
+                .unwrap();
 
             let key_input = document
                 .get_element_by_id("key")
@@ -121,8 +105,4 @@ fn main() {
         .expect("should have an element with `id=\"app\"`");
 
     yew::Renderer::<App>::with_root(div.into()).render();
-
-    // yew::Renderer::<App>::new().render();
-    // yew::start_app::<App>();
-    // yew::start_app_in_element(div, App::init);
 }
