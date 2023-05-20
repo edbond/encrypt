@@ -21,8 +21,11 @@ struct State {
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 struct CsvRow {
+    #[serde(rename = "Email")]
     email: String,
+    #[serde(rename = "First Name")]
     first_name: String,
+    #[serde(rename = "Date of Service")]
     date_of_service: String,
 }
 
@@ -62,7 +65,13 @@ fn App() -> Html {
                     let fr = event.target().unwrap().dyn_into::<FileReader>().unwrap();
                     let result = fr.result().unwrap();
                     let result_str = result.as_string().unwrap();
-                    log_1(&result_str.into());
+                    log_1(&result_str.clone().into());
+
+                    csv::Reader::from_reader(result_str.as_bytes())
+                        .deserialize::<CsvRow>()
+                        .for_each(|row| {
+                            log_1(&format!("{:?}", row).into());
+                        });
                 });
 
                 fr.set_onloadend(Some(cb.unchecked_ref()));

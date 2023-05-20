@@ -3,13 +3,16 @@
     <title>Title</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/dark.css">
 
-<link rel="preload" href="/encrypt-19479a099ef32e5a_bg.wasm" as="fetch" type="application/wasm" crossorigin="">
-<link rel="modulepreload" href="/encrypt-19479a099ef32e5a.js"></head>
+    <link rel="preload" href="/encrypt-9ae9a5243fdb52de_bg.wasm" as="fetch" type="application/wasm" crossorigin="">
+    <link rel="modulepreload" href="/encrypt-9ae9a5243fdb52de.js">
+</head>
 <body>
 <h1>Encrypt</h1>
 <div id="app"> Application loading...</div>
 
-<script type="module">import init from '/encrypt-19479a099ef32e5a.js';init('/encrypt-19479a099ef32e5a_bg.wasm');</script><script>(function () {
+<script type="module">import init from '/encrypt-9ae9a5243fdb52de.js';init('/encrypt-9ae9a5243fdb52de_bg.wasm');
+</script>
+<script>(function () {
     var protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     var url = protocol + '//' + window.location.host + '/_trunk/ws';
     var poll_interval = 5000;
