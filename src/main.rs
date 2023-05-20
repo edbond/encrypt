@@ -1,6 +1,10 @@
+use std::future::Future;
+
+use js_sys::Function;
 use wasm_bindgen::prelude::*;
+use wasm_bindgen_futures::spawn_local;
+use web_sys::{Document, FileReader, HtmlElement, HtmlInputElement, window, Window};
 use web_sys::console::*;
-use web_sys::{window, Document, File, FileReader, HtmlElement, HtmlInputElement, Window};
 use yew::prelude::*;
 
 use crate::utils::set_panic_hook;
@@ -12,6 +16,7 @@ mod utils;
 #[cfg(feature = "wee_alloc")]
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
+
 
 #[wasm_bindgen]
 extern "C" {
@@ -46,13 +51,28 @@ fn App() -> Html {
                 .dyn_into()
                 .unwrap();
 
-            let file_reader: FileReader = FileReader::new().expect("should have file reader");
-            file_reader.set_onloadend(|_| {
-                log_1(&format!("file content: {:?}", file_reader.result()).into());
-            });
-            file_reader
-                .read_as_text(&file_input.files().unwrap().get(0).unwrap())
-                .unwrap();
+            // Create a new FileReader object and unwrap the result
+            let file_reader = FileReader::new().unwrap();
+
+// Wrap a closure that takes no arguments and returns nothing in a Box
+// The closure captures the file_reader by cloning it
+// The closure logs the result of reading the file as a string
+            let onload_fn = Closure::wrap(Box::new(move || {
+// Get the result of the file_reader and unwrap it
+                let result = file_reader.clone().result().unwrap();
+// Convert the result to a string and unwrap it
+                let result = result.as_string().unwrap();
+// Log the file content using the log_1 function
+                log_1(&format!("file content: {}", result).into());
+            }) as Box<dyn FnMut()>);
+
+// Set the onload property of the file_reader to the closure reference
+            file_reader.set_onload(Some(onload_fn.as_ref().unchecked_ref()));
+
+// Get the first file from the file_input and unwrap it
+            let file = file_input.files().unwrap().get(0).unwrap();
+// Read the file as text and unwrap the result
+            file_reader.read_as_text(&file).unwrap();
 
             let key_input = document
                 .get_element_by_id("key")
@@ -67,9 +87,10 @@ fn App() -> Html {
 
     html! {
         <>
+        <form method="post" enctype="multipart/form-data">
         <label>
             { "Input file:" }
-            <input type="file" id="file" />
+            <input type="file" id="file" accept=".csv" />
         </label>
 
         <br/>
@@ -90,6 +111,7 @@ fn App() -> Html {
         <div>
             <button {onclick}>{ "Run" }</button>
         </div>
+        </form>
         </>
     }
 }
@@ -105,4 +127,8 @@ fn main() {
         .expect("should have an element with `id=\"app\"`");
 
     yew::Renderer::<App>::with_root(div.into()).render();
+
+    // yew::Renderer::<App>::new().render();
+    // yew::start_app::<App>();
+    // yew::start_app_in_element(div, App::init);
 }
