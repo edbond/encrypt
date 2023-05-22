@@ -1,3 +1,6 @@
+use std::io::BufWriter;
+
+use serde::__private::de::IdentifierDeserializer;
 use serde_derive::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 use web_sys::console::*;
@@ -27,6 +30,8 @@ struct CsvRow {
     first_name: String,
     #[serde(rename = "Date of Service")]
     date_of_service: String,
+    #[serde(rename = "URL")]
+    url: String,
 }
 
 #[function_component]
@@ -67,11 +72,27 @@ fn App() -> Html {
                     let result_str = result.as_string().unwrap();
                     log_1(&result_str.clone().into());
 
+                    let mut result_file = BufWriter::new(Vec::new());
+
+                    let mut csv_writer = csv::Writer::from_writer(result_file);
+
                     csv::Reader::from_reader(result_str.as_bytes())
                         .deserialize::<CsvRow>()
                         .for_each(|row| {
                             log_1(&format!("{:?}", row).into());
+
+                            csv_writer
+                                .serialize(CsvRow {
+                                    email: row.unwrap().email,
+                                    first_name: row.unwrap().first_name,
+                                    date_of_service: row.unwrap().date_of_service,
+                                    url: "https://www.google.com/?pharmaid={encrypted}".to_string(),
+                                })
+                                .unwrap();
                         });
+
+                    csv_writer.flush().unwrap();
+                    log_1(&JsValue::from(result_file.into_inner().unwrap()));
                 });
 
                 fr.set_onloadend(Some(cb.unchecked_ref()));

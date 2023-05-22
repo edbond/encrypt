@@ -14,16 +14,28 @@ yew = { version = "0.20.0", features = ["csr"] }
 web-sys = { version = "0.3", features = ["console", "Window", "Document",
     "HtmlElement", "Node", "Text",
     "HtmlInputElement",
+    'DedicatedWorkerGlobalScope',
+    'MessageEvent',
+    "Worker",
+    'Navigator',
+    'ErrorEvent',
+    'Event',
     "File", "FileList", "Blob"] }
 
 js-sys = "0.3.61"
 
-wasm-bindgen-futures = "0.4.34"
+wasm-bindgen-futures = "0.4"
 
 serde-wasm-bindgen = "0.5.0"
 serde = "1.0.162"
 csv = "1.2"
 serde_derive = "1.0.162"
+
+getrandom = { version = "0.2", features = ["js"] }
+aes-gcm = "0.10.2"
+
+rayon = "1.1.0"
+rayon-core = "1.5.0"
 
 # The `console_error_panic_hook` crate provides better debugging of panics by
 # logging them with `console.error`. This is great for development, but requires
@@ -50,3 +62,10 @@ opt-level = 'z'
 # opt-level = 's'
 # link time optimization using using whole-program analysis
 lto = true
+
+[unstable]
+build-std = ['std', 'panic_abort']
+
+[build]
+target = "wasm32-unknown-unknown"
+rustflags = '-Ctarget-feature=+atomics,+bulk-memory'
