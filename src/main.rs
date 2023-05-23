@@ -1,6 +1,5 @@
 use std::io::BufWriter;
 
-use serde::__private::de::IdentifierDeserializer;
 use serde_derive::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 use web_sys::console::*;
@@ -23,7 +22,17 @@ struct State {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-struct CsvRow {
+struct CsvInput {
+    #[serde(rename = "Email")]
+    email: String,
+    #[serde(rename = "First Name")]
+    first_name: String,
+    #[serde(rename = "Date of Service")]
+    date_of_service: String,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+struct CsvOutput {
     #[serde(rename = "Email")]
     email: String,
     #[serde(rename = "First Name")]
@@ -68,31 +77,39 @@ fn App() -> Html {
                     // do nothing
                     log_1(&"Hello, encrypt, onloadend!".into());
                     let fr = event.target().unwrap().dyn_into::<FileReader>().unwrap();
-                    let result = fr.result().unwrap();
-                    let result_str = result.as_string().unwrap();
-                    log_1(&result_str.clone().into());
+                    let input = fr.result().unwrap();
+                    let input_str = input.as_string().unwrap();
+                    log_1(&input_str.clone().into());
 
-                    let mut result_file = BufWriter::new(Vec::new());
+                    let buf = Vec::new();
+                    let result_file = BufWriter::new(buf);
 
                     let mut csv_writer = csv::Writer::from_writer(result_file);
 
-                    csv::Reader::from_reader(result_str.as_bytes())
-                        .deserialize::<CsvRow>()
+                    csv::Reader::from_reader(input_str.as_bytes())
+                        .deserialize::<CsvInput>()
                         .for_each(|row| {
-                            log_1(&format!("{:?}", row).into());
+                            let r = row.expect("csv row").clone();
+                            log_1(&format!("{:?}", r).into());
 
                             csv_writer
-                                .serialize(CsvRow {
-                                    email: row.unwrap().email,
-                                    first_name: row.unwrap().first_name,
-                                    date_of_service: row.unwrap().date_of_service,
+                                .serialize(CsvOutput {
+                                    email: r.email,
+                                    first_name: r.first_name,
+                                    date_of_service: r.date_of_service,
                                     url: "https://www.google.com/?pharmaid={encrypted}".to_string(),
                                 })
                                 .unwrap();
                         });
 
                     csv_writer.flush().unwrap();
-                    log_1(&JsValue::from(result_file.into_inner().unwrap()));
+                    // Flush the writer and get the buffer
+                    let buf = csv_writer
+                        .into_inner()
+                        .expect("failed to get buffer")
+                        .into_inner();
+
+                    log_1(&JsValue::from(String::from_utf8(buf.unwrap()).unwrap()));
                 });
 
                 fr.set_onloadend(Some(cb.unchecked_ref()));
@@ -133,6 +150,9 @@ fn App() -> Html {
         <div>
             <button {onclick}>{ "Run" }</button>
         </div>
+
+        <textarea id="result" style="width: 100%; height: 500px"></textarea>
+
         </form>
         </>
     }
