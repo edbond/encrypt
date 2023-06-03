@@ -19,6 +19,7 @@ web-sys = { version = "0.3", features = ["console", "Window", "Document",
     "Worker",
     'Navigator',
     'ErrorEvent',
+    "Performance",
     'Event',
     "File", "FileList", "Blob"] }
 
@@ -32,10 +33,12 @@ csv = "1.2"
 serde_derive = "1.0.162"
 
 getrandom = { version = "0.2", features = ["js"] }
-aes-gcm = "0.10.2"
+aes-gcm = "0.10.1"
 
 rayon = "1.1.0"
 rayon-core = "1.5.0"
+
+base64 = "0.21.0"
 
 # The `console_error_panic_hook` crate provides better debugging of panics by
 # logging them with `console.error`. This is great for development, but requires

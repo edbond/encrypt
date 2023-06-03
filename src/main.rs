@@ -1,5 +1,10 @@
 use std::io::BufWriter;
 
+use aes_gcm::{
+    aead::{Aead, AeadCore, KeyInit, OsRng},
+    Aes128Gcm, Key,
+};
+use base64::{engine::general_purpose, Engine as _};
 use serde_derive::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 use web_sys::console::*;
@@ -43,6 +48,15 @@ struct CsvOutput {
     url: String,
 }
 
+fn aes_encrypt(key: &[u8], data: &[u8]) -> String {
+    let key = Key::<Aes128Gcm>::from_slice(key);
+    let cipher = Aes128Gcm::new(&key);
+    let nonce = Aes128Gcm::generate_nonce(&mut OsRng); // 96-bits; unique per message
+    let ciphertext = cipher.encrypt(&nonce, data).unwrap();
+    let payload = [nonce.as_slice(), &ciphertext].concat();
+    general_purpose::URL_SAFE_NO_PAD.encode(&payload)
+}
+
 #[function_component]
 fn App() -> Html {
     let counter = use_state(|| State { value: 0 });
@@ -51,13 +65,15 @@ fn App() -> Html {
 
         move |ev: MouseEvent| {
             ev.prevent_default();
-            log_1(&"Hello, encrypt, inc!".into());
+            // log_1(&"Hello, encrypt, inc!".into());
 
             counter.set(State {
                 value: counter.value + 1,
             });
 
             let window: Window = window().expect("should have a window in this context");
+
+            let t1 = window.performance().unwrap().now();
             let document: Document = window
                 .document()
                 .expect("window should have a document")
@@ -70,16 +86,23 @@ fn App() -> Html {
                 .dyn_into()
                 .unwrap();
 
+            let url_format = document
+                .get_element_by_id("url")
+                .expect("should have url format")
+                .dyn_into::<HtmlInputElement>()
+                .unwrap()
+                .value();
+
             if let Some(file) = file_input.files().unwrap().get(0) {
                 let fr = &FileReader::new().unwrap();
 
                 let cb = Closure::once_into_js(move |event: Event| {
                     // do nothing
-                    log_1(&"Hello, encrypt, onloadend!".into());
+                    log_1(&"File read!".into());
                     let fr = event.target().unwrap().dyn_into::<FileReader>().unwrap();
                     let input = fr.result().unwrap();
                     let input_str = input.as_string().unwrap();
-                    log_1(&input_str.clone().into());
+                    // log_1(&input_str.clone().into());
 
                     let buf = Vec::new();
                     let result_file = BufWriter::new(buf);
@@ -90,14 +113,19 @@ fn App() -> Html {
                         .deserialize::<CsvInput>()
                         .for_each(|row| {
                             let r = row.expect("csv row").clone();
-                            log_1(&format!("{:?}", r).into());
+                            // log_1(&format!("{:?}", r).into());
+
+                            let encrypted =
+                                aes_encrypt(r.date_of_service.as_bytes(), "biFo9shi".as_bytes());
+
+                            let url = url_format.replace("{encrypted}", &encrypted);
 
                             csv_writer
                                 .serialize(CsvOutput {
                                     email: r.email,
                                     first_name: r.first_name,
                                     date_of_service: r.date_of_service,
-                                    url: "https://www.google.com/?pharmaid={encrypted}".to_string(),
+                                    url,
                                 })
                                 .unwrap();
                         });
@@ -109,7 +137,10 @@ fn App() -> Html {
                         .expect("failed to get buffer")
                         .into_inner();
 
-                    log_1(&JsValue::from(String::from_utf8(buf.unwrap()).unwrap()));
+                    // log_1(&JsValue::from(String::from_utf8(buf.unwrap()).unwrap()));
+
+                    let t2 = window.performance().unwrap().now();
+                    log_1(&format!("Time: {} ms", t2 - t1).into());
                 });
 
                 fr.set_onloadend(Some(cb.unchecked_ref()));
